@@ -1,0 +1,35 @@
+# 離散化版（docs/sample.pdf の後半）: 各スコア + BD を分位ごとに離散的に期待リターン付与
+title = "EMAI_Transformer (discretized)"
+output_dir = "../reports/discretized"
+
+# [factor_returns]
+# path = "../data/factor_returns.csv"
+# unit = "percent"
+
+[[runs]]
+label = "Current"
+path = "../data/output/discretized/ai70_bd30"
+
+[[runs]]
+label = "v3"
+path = "../data/output/discretized/v3-70_bd30"
+
+[[runs]]
+label = "v4"
+path = "../data/output/discretized/v4-70_bd30"
+
+[[runs]]
+label = "v5"
+path = "../data/output/discretized/v5-70_bd30"
+
+[[runs]]
+label = "v6"
+path = "../data/output/discretized/v6-70_bd30"
+
+[[runs]]
+label = "v7"
+path = "../data/output/discretized/v7-70_bd30"
+
+[[runs]]
+label = "v8"
+path = "../data/output/discretized/v8-70_bd30"

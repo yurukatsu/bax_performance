@@ -1,0 +1,42 @@
+# 素点スコア版（docs/sample.pdf の前半）
+title = "EMAI_Transformer"
+output_dir = "../reports/raw"
+# start = 201702
+# end = 202603
+
+# Barra 系の図を出す場合はファクターリターンを指定する
+# [factor_returns]
+# path = "../data/factor_returns.csv"
+# unit = "percent"
+
+[[runs]]
+label = "ai"
+path = "../data/output/raw/ai"
+
+[[runs]]
+label = "ai70bd30"
+path = "../data/output/raw/ai70_bd30"
+
+[[runs]]
+label = "v3"
+path = "../data/output/raw/v3"
+
+[[runs]]
+label = "v4"
+path = "../data/output/raw/v4"
+
+[[runs]]
+label = "v5"
+path = "../data/output/raw/v5"
+
+[[runs]]
+label = "v6"
+path = "../data/output/raw/v6"
+
+[[runs]]
+label = "v7"
+path = "../data/output/raw/v7"
+
+[[runs]]
+label = "v8"
+path = "../data/output/raw/v8"
