@@ -57,7 +57,7 @@ class ReportData:
 
 def compute(config: ReportConfig) -> ReportData:
     outputs = [BaxOutput.from_path(r.path, r.label) for r in config.runs]
-    plots.run_colors([o.label for o in outputs])  # 本数チェック
+    plots.run_styles([o.label for o in outputs])  # 本数チェック
 
     series = {o.label: metrics.monthly_series(o, config.start, config.end) for o in outputs}
     brinson = []
@@ -103,27 +103,27 @@ def write_tables(data: ReportData, out_dir: Path) -> None:
 
 def figures(data: ReportData, config: ReportConfig) -> dict[str, plt.Figure]:
     """ファイル名（拡張子なし）→ Figure。並びは PDF のページ順。"""
-    colors = plots.run_colors(data.labels)
+    styles = plots.run_styles(data.labels)
     figs: dict[str, plt.Figure] = {
         "00_performance_page": plots.fig_performance_page(
             data.summary,
             data.cumulative_excess,
             data.alpha,
             data.annual_excess,
-            colors,
+            styles,
             title=f"{config.title}: performance summary",
         ),
         "01_summary_table": plots.fig_summary_table(data.summary),
-        "02_cumulative_excess": plots.fig_cumulative_excess(data.cumulative_excess, colors),
-        "03_expected_alpha": plots.fig_alpha(data.alpha, colors),
-        "04_excess_ir": plots.fig_excess_ir(data.summary, colors),
-        "05_annual_excess": plots.fig_annual_excess(data.annual_excess, colors),
+        "02_cumulative_excess": plots.fig_cumulative_excess(data.cumulative_excess, styles),
+        "03_expected_alpha": plots.fig_alpha(data.alpha, styles),
+        "04_excess_ir": plots.fig_excess_ir(data.summary, styles),
+        "05_annual_excess": plots.fig_annual_excess(data.annual_excess, styles),
     }
     if data.has_factor:
         figs["06_barra_classes"] = plots.fig_barra_classes(data.barra_annualized())
-        figs["07_cumulative_style"] = plots.fig_cumulative_class(data.cumulative_class("Style"), colors, "Style")
+        figs["07_cumulative_style"] = plots.fig_cumulative_class(data.cumulative_class("Style"), styles, "Style")
         figs["08_cumulative_specific"] = plots.fig_cumulative_class(
-            data.cumulative_class("specific"), colors, "specific"
+            data.cumulative_class("specific"), styles, "specific"
         )
         figs["09_risk_index_top"] = plots.fig_style_top(data.style, n=config.style_top_n)
     figs["10_brinson_country"] = plots.fig_brinson(data.brinson_totals(), data.brinson_country_order())

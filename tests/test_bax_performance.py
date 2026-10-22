@@ -162,7 +162,18 @@ def test_cli_with_runs_only(bax_dirs, tmp_path):
 
 
 def test_too_many_runs_rejected():
-    from bax_performance.plots import run_colors
+    from bax_performance.plots import run_styles
 
     with pytest.raises(ValueError):
-        run_colors([str(i) for i in range(9)])
+        run_styles([str(i) for i in range(17)])
+
+
+def test_runs_beyond_eight_reuse_colors_with_second_encoding():
+    from bax_performance.plots import SERIES_COLORS, run_styles
+
+    styles = run_styles([f"r{i}" for i in range(16)])
+    assert styles["r0"].color == styles["r8"].color == SERIES_COLORS[0]
+    assert styles["r0"].line["linestyle"] == "-"
+    assert styles["r8"].line["linestyle"] != "-"
+    assert "hatch" not in styles["r0"].bar
+    assert styles["r8"].bar["hatch"]
