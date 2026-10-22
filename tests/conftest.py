@@ -61,7 +61,7 @@ def make_bax_output(root: Path, seed: int = 0) -> Path:
 
 def make_factor_returns(path: Path, seed: int = 1) -> Path:
     rng = np.random.default_rng(seed)
-    rows = [{"month": m, "factor": f, "return": rng.normal(0, 1)} for m in MONTHS for f in FACTORS]
+    rows = [{"month": m, "factor": f, "return": rng.normal(0, 0.01)} for m in MONTHS for f in FACTORS]
     pd.DataFrame(rows).to_csv(path, index=False)
     return path
 

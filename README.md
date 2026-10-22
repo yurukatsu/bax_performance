@@ -27,8 +27,8 @@ start = 201702        # 省略可（YYYYMM）。省略時は全期間
 end = 202603          # 省略可
 
 [factor_returns]      # 省略可。Barra 系の図に必要（後述）
-path = "../data/factor_returns.csv"
-unit = "percent"      # "percent" or "decimal"
+path = "../data/fctrtn_monthly.csv"
+unit = "decimal"      # "decimal"（既定）or "percent"
 
 [[runs]]
 label = "ai"

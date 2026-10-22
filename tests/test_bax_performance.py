@@ -85,7 +85,21 @@ def test_load_factor_returns_long_and_wide(factor_csv, tmp_path):
     raw.to_csv(tmp_path / "wide.csv", index=False)
     wide = attr.load_factor_returns(tmp_path / "wide.csv")
     pd.testing.assert_frame_equal(long, wide[long.columns], check_names=False)
-    assert long.abs().max().max() < 0.1  # % → 小数
+
+
+def test_load_factor_returns_fctrtn_format(factor_csv, tmp_path):
+    """fctrtn_monthly.csv 形式（dateym, fac, frtn、名前が空欄の行あり）を読める。"""
+    raw = pd.read_csv(factor_csv).rename(columns={"month": "dateym", "factor": "fac", "return": "frtn"})
+    blank = raw.head(3).assign(fac="")
+    pd.concat([raw, blank]).to_csv(tmp_path / "fctrtn.csv", index=False)
+    with pytest.warns(UserWarning, match="空欄"):
+        got = attr.load_factor_returns(tmp_path / "fctrtn.csv")
+    pd.testing.assert_frame_equal(got, attr.load_factor_returns(factor_csv), check_names=False)
+
+
+def test_load_factor_returns_percent_unit(factor_csv):
+    pct = attr.load_factor_returns(factor_csv, unit="percent")
+    np.testing.assert_allclose(pct.to_numpy() * 100, attr.load_factor_returns(factor_csv).to_numpy())
 
 
 def test_factor_attribution_adds_up(bax_dirs, factor_csv):

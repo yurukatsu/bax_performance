@@ -2,9 +2,10 @@
 title = "EMAI_Transformer (discretized)"
 output_dir = "../reports/discretized"
 
-# [factor_returns]
-# path = "../data/factor_returns.csv"
-# unit = "percent"
+# Barra 系の図に使うファクターリターン（Notion の File Share から取得した fctrtn_monthly.csv）
+[factor_returns]
+path = "../data/fctrtn_monthly.csv"
+unit = "decimal"
 
 [[runs]]
 label = "Current"

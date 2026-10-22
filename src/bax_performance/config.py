@@ -7,8 +7,8 @@
     end = 202609          # 省略可
 
     [factor_returns]      # 省略可。Barra 系の図に必要
-    path = "../data/factor_returns.csv"
-    unit = "percent"      # "percent" or "decimal"
+    path = "../data/fctrtn_monthly.csv"
+    unit = "decimal"      # "decimal"（既定）or "percent"
 
     [[runs]]
     label = "ai"
@@ -36,7 +36,7 @@ class ReportConfig:
     start: int | None = None
     end: int | None = None
     factor_returns: Path | None = None
-    factor_returns_unit: str = "percent"
+    factor_returns_unit: str = "decimal"
     style_top_n: int = 5
 
     @classmethod
@@ -58,6 +58,6 @@ class ReportConfig:
             start=data.get("start"),
             end=data.get("end"),
             factor_returns=resolve(fr["path"]) if fr.get("path") else None,
-            factor_returns_unit=fr.get("unit", "percent"),
+            factor_returns_unit=fr.get("unit", "decimal"),
             style_top_n=data.get("style_top_n", 5),
         )

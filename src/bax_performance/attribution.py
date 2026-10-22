@@ -95,16 +95,29 @@ def brinson(
 # ---------------------------------------------------------------- Barra
 
 
-def load_factor_returns(path: str | Path, unit: str = "percent") -> pd.DataFrame:
+# これ未満のアクティブエクスポージャーはリターン欠損を警告しない（寄与は無視できる大きさ）
+MATERIAL_EXPOSURE = 1e-3
+
+LONG_COLUMN_ALIASES = {"dateym": "month", "fac": "factor", "frtn": "return"}
+
+
+def load_factor_returns(path: str | Path, unit: str = "decimal") -> pd.DataFrame:
     """ファクターリターンを読む。index=month(YYYYMM)、columns=ファクター名、値は小数。
 
     受け付ける CSV:
-      - long 形式: 列 `month, factor, return`
+      - long 形式: 列 `month, factor, return`（`fctrtn_monthly.csv` の `dateym, fac, frtn` も可）
       - wide 形式: 列 `month` と各ファクター名（A ファイルの属性名、例 R13_MOMENTUM）
+    ファクター名が空欄の行は除外して警告する（fctrtn_monthly.csv では世界ファクター C89_WORLD と思われる。
+    アクティブエクスポージャーはほぼ 0 なので寄与への影響はない）。
     """
-    raw = pd.read_csv(path)
+    raw = pd.read_csv(path, dtype={"fac": str, "factor": str}, keep_default_na=False, na_values=["", "NA", "NaN"])
     raw.columns = [c.strip() for c in raw.columns]
+    raw = raw.rename(columns=LONG_COLUMN_ALIASES)
     if {"month", "factor", "return"} <= set(raw.columns):
+        blank = raw["factor"].fillna("").str.strip() == ""
+        if blank.any():
+            warnings.warn(f"{path}: ファクター名が空欄の行を除外しました（{int(blank.sum())} 行）", stacklevel=2)
+            raw = raw[~blank]
         df = raw.pivot_table(index="month", columns="factor", values="return", aggfunc="first")
     elif "month" in raw.columns:
         df = raw.set_index("month")
@@ -135,13 +148,21 @@ def factor_attribution(out: BaxOutput, factor_returns: pd.DataFrame, months: lis
     exp = out.active_exposure_panel([p for _, p in pairs])
     exp.index = [m for m, _ in pairs]
     missing = sorted(set(exp.columns) - set(factor_returns.columns))
-    nonzero_missing = [f for f in missing if exp[f].abs().max() > 1e-12]
+    nonzero_missing = [f for f in missing if exp[f].abs().max() > MATERIAL_EXPOSURE]
     if nonzero_missing:
         warnings.warn(
             f"{out.label}: ファクターリターンが無いファクター（寄与 0 扱い）: {nonzero_missing}", stacklevel=2
         )
-    fr = factor_returns.reindex(index=exp.index, columns=exp.columns).fillna(0.0)
-    contrib = exp.fillna(0.0) * fr
+    fr = factor_returns.reindex(index=exp.index, columns=exp.columns)
+    gaps = fr.isna() & (exp.abs() > MATERIAL_EXPOSURE)
+    gaps = gaps.drop(columns=nonzero_missing)
+    if gaps.values.any():
+        cols = list(gaps.columns[gaps.any()])
+        warnings.warn(
+            f"{out.label}: エクスポージャーがあるのにファクターリターンが欠けている月があります（寄与 0 扱い）: {cols}",
+            stacklevel=2,
+        )
+    contrib = exp.fillna(0.0) * fr.fillna(0.0)
 
     gross_active = (out.prfm["fund_ex_rtn"] + out.prfm["tr_cost"]).reindex(exp.index)
     contrib["specific"] = gross_active - contrib.sum(axis=1)

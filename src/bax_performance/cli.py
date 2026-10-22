@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import logging
 import sys
+import warnings
 from pathlib import Path
 
 from .config import ReportConfig, RunSpec
@@ -41,6 +42,8 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     logging.basicConfig(level=logging.INFO if args.verbose else logging.WARNING, format="%(levelname)s %(message)s")
+    logging.captureWarnings(True)
+    warnings.formatwarning = lambda message, category, *a, **k: f"{message}"
 
     if args.config:
         cfg = ReportConfig.from_toml(args.config)
