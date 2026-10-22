@@ -17,3 +17,6 @@ reports/
 
 # internal documents (not committed)
 docs/
+
+# lock file (not committed)
+uv.lock
