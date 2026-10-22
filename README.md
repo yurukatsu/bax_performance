@@ -122,13 +122,19 @@ reports/<name>/
 
 **ファクターリターンは BAX 出力に含まれない**（`bc.txt` で `f_get_attr = 0`）ため、CSV で別途渡す。ファクター名は `A{date}.dat` の属性名（`R13_MOMENTUM`, `I05_BANKS`, `C15_HKG`, `c14_HKGC` など）に合わせる。
 
+long 形式の例（値は架空。単位は小数）:
+
 ```csv
-month,factor,return
-201702,R13_MOMENTUM,0.85
-201702,I05_BANKS,-1.20
+dateym,fac,frtn
+201702,R13_MOMENTUM,0.0085
+201702,I05_BANKS,-0.0120
 ```
 
-列 `month` と各ファクター名を列に持つ wide 形式も可。指定がなければ Barra 系の図は省略される。
+- 列名は `dateym, fac, frtn` か `month, factor, return`。列 `month` と各ファクター名を列に持つ wide 形式も可
+- 単位は既定で小数（`unit = "decimal"`）。% で書かれたファイルは設定で `unit = "percent"` を指定する
+- ファクター名が空欄の行は警告を出して除外する
+- エクスポージャーが 0.001 以上あるのにリターンが欠けているファクター・月は、寄与 0 として警告する
+- 指定がなければ Barra 系の図は省略される
 
 ## 開発
 

@@ -107,8 +107,7 @@ def load_factor_returns(path: str | Path, unit: str = "decimal") -> pd.DataFrame
     受け付ける CSV:
       - long 形式: 列 `month, factor, return`（`fctrtn_monthly.csv` の `dateym, fac, frtn` も可）
       - wide 形式: 列 `month` と各ファクター名（A ファイルの属性名、例 R13_MOMENTUM）
-    ファクター名が空欄の行は除外して警告する（fctrtn_monthly.csv では世界ファクター C89_WORLD と思われる。
-    アクティブエクスポージャーはほぼ 0 なので寄与への影響はない）。
+    ファクター名が空欄の行は除外して警告する。
     """
     raw = pd.read_csv(path, dtype={"fac": str, "factor": str}, keep_default_na=False, na_values=["", "NA", "NaN"])
     raw.columns = [c.strip() for c in raw.columns]
