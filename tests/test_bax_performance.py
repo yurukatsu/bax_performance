@@ -177,3 +177,49 @@ def test_runs_beyond_eight_reuse_colors_with_second_encoding():
     assert styles["r8"].line["linestyle"] != "-"
     assert "hatch" not in styles["r0"].bar
     assert styles["r8"].bar["hatch"]
+
+
+def test_parse_and_format_months():
+    from bax_performance.config import format_months, parse_months
+
+    assert parse_months([202204]) == [202204]
+    assert parse_months(["202111-202202", 202204, "202204"]) == [202111, 202112, 202201, 202202, 202204]
+    assert format_months([202111, 202112, 202201, 202204]) == "2021-11–2022-01, 2022-04"
+    for bad in ["2022-04", 202213, "202205-202204"]:
+        with pytest.raises(ValueError):
+            parse_months([bad])
+
+
+def test_excluded_months_are_dropped_from_all_aggregations(bax_dirs, factor_csv, tmp_path):
+    out = BaxOutput.from_path(bax_dirs[0])
+    full = metrics.monthly_series(out)
+    ex = metrics.monthly_series(out, exclude=[202003])
+    assert list(ex.index) == [202002, 202004, 202005]
+    assert metrics.summary_stats(ex)["Excess Return"] == pytest.approx(full.drop(202003)["excess"].mean() * 12)
+
+    cfg = tmp_path / "cfg.toml"
+    cfg.write_text(
+        f"""
+output_dir = "out"
+exclude = ["202003-202003", 209901]
+[factor_returns]
+path = "{factor_csv.name}"
+[[runs]]
+label = "A"
+path = "{bax_dirs[0].name}"
+"""
+    )
+    from bax_performance import ReportConfig, compute
+
+    data = compute(ReportConfig.from_toml(cfg))
+    assert data.excluded == [202003]  # 期間外の 209901 は無視
+    assert 202003 not in set(data.brinson["month"])
+    assert 202003 not in data.factor["A"].index
+    assert 202003 not in data.cumulative_excess.index
+    assert data.exclusion_note == "Excluded months: 2020-03"
+
+
+def test_cli_exclude_option(bax_dirs, tmp_path):
+    out = tmp_path / "ex"
+    assert main(["report", "--run", f"A={bax_dirs[0]}", "-o", str(out), "--exclude", "202003"]) == 0
+    assert pd.read_csv(out / "tables" / "excluded_months.csv")["month"].tolist() == [202003]

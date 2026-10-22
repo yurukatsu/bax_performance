@@ -11,7 +11,8 @@
 - Cost             : 月次取引コストの平均 × 12
 - Per_Trade        : Cost / (2 × Turnover)  … 片道 1 回あたりのコスト
 累積超過・年次超過は月次超過リターンの単純和（算術）。
-リターンが NA の月（初回の組成月）は集計から除く。
+リターンが NA の月（初回の組成月）と、設定 `exclude` で指定した月は集計から除く。
+除外月はリターン系列から抜くだけで、前後の月はそのままつなぐ（年率化は残った月数で行う）。
 """
 
 from __future__ import annotations
@@ -34,14 +35,16 @@ SUMMARY_COLUMNS = [
 ]
 
 
-def select_months(months, start: int | None = None, end: int | None = None) -> list[int]:
-    return [m for m in months if (start is None or m >= start) and (end is None or m <= end)]
+def select_months(months, start: int | None = None, end: int | None = None, exclude=()) -> list[int]:
+    """start〜end（両端含む）の月から exclude の月を除いたもの。"""
+    ex = set(exclude)
+    return [m for m in months if (start is None or m >= start) and (end is None or m <= end) and m not in ex]
 
 
-def monthly_series(out: BaxOutput, start: int | None = None, end: int | None = None) -> pd.DataFrame:
-    """評価対象月の月次系列（bm, fund, excess, cost, turnover）。"""
+def monthly_series(out: BaxOutput, start: int | None = None, end: int | None = None, exclude=()) -> pd.DataFrame:
+    """評価対象月の月次系列（bm, fund, excess, cost, turnover）。exclude の月は除く。"""
     p = out.prfm.dropna(subset=["fund_rtn"])
-    p = p.loc[select_months(p.index, start, end)]
+    p = p.loc[select_months(p.index, start, end, exclude)]
     return pd.DataFrame(
         {
             "bm": p["bm_rtn"],

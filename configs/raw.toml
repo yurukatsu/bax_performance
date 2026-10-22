@@ -4,6 +4,9 @@ output_dir = "../reports/raw"
 # start = 201702
 # end = 202603
 
+# 集計から除く月（YYYYMM か "YYYYMM-YYYYMM"）。2022-04 はノイズのため除外
+exclude = [202204]
+
 # Barra 系の図に使うファクターリターン（Notion の File Share から取得した fctrtn_monthly.csv）
 [factor_returns]
 path = "../data/fctrtn_monthly.csv"

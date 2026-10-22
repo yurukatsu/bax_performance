@@ -8,7 +8,7 @@ import sys
 import warnings
 from pathlib import Path
 
-from .config import ReportConfig, RunSpec
+from .config import ReportConfig, RunSpec, parse_months
 from .report import build_report
 
 
@@ -33,6 +33,12 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--title", help="レポートのタイトル")
     r.add_argument("--start", type=int, help="集計開始月（YYYYMM）")
     r.add_argument("--end", type=int, help="集計終了月（YYYYMM）")
+    r.add_argument(
+        "--exclude",
+        action="append",
+        metavar="YYYYMM[-YYYYMM]",
+        help="集計から除く月・期間（複数可）。設定ファイルの exclude を置き換える",
+    )
     r.add_argument("--factor-returns", type=Path, help="ファクターリターン CSV（Barra 系の図に必要）")
     r.add_argument("--factor-returns-unit", choices=["percent", "decimal"], help="ファクターリターンの単位")
     r.add_argument("-v", "--verbose", action="store_true")
@@ -55,6 +61,8 @@ def main(argv: list[str] | None = None) -> int:
         print("設定ファイルか --run を指定してください", file=sys.stderr)
         return 2
 
+    if args.exclude is not None:
+        cfg.exclude = parse_months(args.exclude)
     for key in ("output_dir", "title", "start", "end", "factor_returns", "factor_returns_unit"):
         value = getattr(args, key)
         if value is not None:

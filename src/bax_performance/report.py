@@ -12,7 +12,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 from . import attribution as attr
 from . import metrics, plots
-from .config import ReportConfig
+from .config import ReportConfig, format_months
 from .io import BaxOutput
 
 log = logging.getLogger(__name__)
@@ -31,6 +31,11 @@ class ReportData:
     factor: dict[str, pd.DataFrame] = field(default_factory=dict)  # label → 月次ファクター別寄与
     factor_class: dict[str, pd.DataFrame] = field(default_factory=dict)  # label → 月次分類別寄与
     style: dict[str, pd.DataFrame] = field(default_factory=dict)  # label → Style サマリー
+    excluded: list[int] = field(default_factory=list)  # 実際に集計から除いた月
+
+    @property
+    def exclusion_note(self) -> str | None:
+        return f"Excluded months: {format_months(self.excluded)}" if self.excluded else None
 
     @property
     def labels(self) -> list[str]:
@@ -59,7 +64,16 @@ def compute(config: ReportConfig) -> ReportData:
     outputs = [BaxOutput.from_path(r.path, r.label) for r in config.runs]
     plots.run_styles([o.label for o in outputs])  # 本数チェック
 
-    series = {o.label: metrics.monthly_series(o, config.start, config.end) for o in outputs}
+    series = {o.label: metrics.monthly_series(o, config.start, config.end, config.exclude) for o in outputs}
+    in_range = {
+        m
+        for o in outputs
+        for m in metrics.select_months(o.prfm.dropna(subset=["fund_rtn"]).index, config.start, config.end)
+    }
+    excluded = sorted(set(config.exclude) & in_range)
+    unused = sorted(set(config.exclude) - in_range)
+    if unused:
+        log.warning("除外月のうち集計期間・データに無い月は無視しました: %s", format_months(unused))
     brinson = []
     for o in outputs:
         log.info("Brinson: %s", o.label)
@@ -72,6 +86,7 @@ def compute(config: ReportConfig) -> ReportData:
         annual_excess=metrics.annual_excess(series),
         alpha=metrics.expected_alpha(outputs, config.start, config.end),
         brinson=pd.concat(brinson, ignore_index=True),
+        excluded=excluded,
     )
 
     if config.factor_returns is not None:
@@ -89,6 +104,7 @@ def write_tables(data: ReportData, out_dir: Path) -> None:
     d = out_dir / "tables"
     d.mkdir(parents=True, exist_ok=True)
     data.summary.to_csv(d / "summary.csv")
+    pd.DataFrame({"month": data.excluded}).to_csv(d / "excluded_months.csv", index=False)
     data.cumulative_excess.to_csv(d / "cumulative_excess.csv")
     data.annual_excess.to_csv(d / "annual_excess.csv")
     data.alpha.to_csv(d / "expected_alpha.csv")
@@ -104,6 +120,7 @@ def write_tables(data: ReportData, out_dir: Path) -> None:
 def figures(data: ReportData, config: ReportConfig) -> dict[str, plt.Figure]:
     """ファイル名（拡張子なし）→ Figure。並びは PDF のページ順。"""
     styles = plots.run_styles(data.labels)
+    shade = data.excluded
     figs: dict[str, plt.Figure] = {
         "00_performance_page": plots.fig_performance_page(
             data.summary,
@@ -112,21 +129,29 @@ def figures(data: ReportData, config: ReportConfig) -> dict[str, plt.Figure]:
             data.annual_excess,
             styles,
             title=f"{config.title}: performance summary",
+            shade=shade,
         ),
         "01_summary_table": plots.fig_summary_table(data.summary),
-        "02_cumulative_excess": plots.fig_cumulative_excess(data.cumulative_excess, styles),
+        "02_cumulative_excess": plots.fig_cumulative_excess(data.cumulative_excess, styles, shade=shade),
         "03_expected_alpha": plots.fig_alpha(data.alpha, styles),
         "04_excess_ir": plots.fig_excess_ir(data.summary, styles),
         "05_annual_excess": plots.fig_annual_excess(data.annual_excess, styles),
     }
     if data.has_factor:
         figs["06_barra_classes"] = plots.fig_barra_classes(data.barra_annualized())
-        figs["07_cumulative_style"] = plots.fig_cumulative_class(data.cumulative_class("Style"), styles, "Style")
+        figs["07_cumulative_style"] = plots.fig_cumulative_class(
+            data.cumulative_class("Style"), styles, "Style", shade=shade
+        )
         figs["08_cumulative_specific"] = plots.fig_cumulative_class(
-            data.cumulative_class("specific"), styles, "specific"
+            data.cumulative_class("specific"), styles, "specific", shade=shade
         )
         figs["09_risk_index_top"] = plots.fig_style_top(data.style, n=config.style_top_n)
     figs["10_brinson_country"] = plots.fig_brinson(data.brinson_totals(), data.brinson_country_order())
+    if data.exclusion_note:
+        for name, fig in figs.items():
+            # 期待アルファは最適化時点の値なので除外の対象外
+            if name != "03_expected_alpha":
+                plots.add_note(fig, data.exclusion_note)
     return figs
 
 

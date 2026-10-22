@@ -17,6 +17,7 @@ from matplotlib.colors import to_hex, to_rgb
 from matplotlib.ticker import PercentFormatter
 
 from .attribution import BRINSON_EFFECTS, FACTOR_CLASS_ORDER
+from .config import month_spans
 from .io import month_end
 
 # 検証済みカテゴリカルパレット（固定順。ランの並び順に割り当てる）
@@ -35,6 +36,7 @@ INK_2 = "#52514e"
 MUTED = "#898781"
 GRID = "#e1e0d9"
 BASELINE = "#c3c2b7"
+EXCLUDED_BAND = "#e9e8e2"  # 集計から除外した月の網掛け
 
 STYLE = {
     "figure.facecolor": SURFACE,
@@ -144,6 +146,19 @@ def _bar_labels(ax, bars, values, fmt="{:.2%}", extra=None, fontsize=7):
             )
 
 
+def shade_months(ax, months) -> None:
+    """除外月をリターン期間（前月末〜当月末）として網掛けする。"""
+    for a, b in month_spans(months):
+        x0 = pd.Timestamp(year=a // 100, month=a % 100, day=1) - pd.Timedelta(days=1)
+        x1 = month_end([b])[0]
+        ax.axvspan(x0, x1, color=EXCLUDED_BAND, linewidth=0, zorder=0)
+
+
+def add_note(fig, text: str) -> None:
+    """図の右上に注記を入れる。"""
+    fig.text(0.995, 0.995, text, ha="right", va="top", fontsize=8, color=INK_2)
+
+
 def _expand_ylim(ax, frac=0.18):
     lo, hi = ax.get_ylim()
     span = hi - lo
@@ -163,7 +178,9 @@ def _facet_grid(n: int, ncols: int, panel_w: float, panel_h: float, sharey=True)
 # ---------------------------------------------------------------- performance summary
 
 
-def plot_lines(ax, df: pd.DataFrame, styles: dict[str, RunStyle], ylabel: str, decimals=0, percent=True):
+def plot_lines(ax, df: pd.DataFrame, styles: dict[str, RunStyle], ylabel: str, decimals=0, percent=True, shade=()):
+    if len(shade):
+        shade_months(ax, shade)
     x = month_end(df.index)
     for label in df.columns:
         ax.plot(x, df[label].to_numpy(), label=label, **styles[label].line)
@@ -174,10 +191,10 @@ def plot_lines(ax, df: pd.DataFrame, styles: dict[str, RunStyle], ylabel: str, d
     _legend_right(ax, "type")
 
 
-def fig_cumulative_excess(cum: pd.DataFrame, styles: dict[str, RunStyle], ax=None):
+def fig_cumulative_excess(cum: pd.DataFrame, styles: dict[str, RunStyle], ax=None, shade=()):
     with style():
         fig, ax = (ax.figure, ax) if ax is not None else plt.subplots(figsize=(8, 4.2))
-        plot_lines(ax, cum, styles, "Cumulative excess (net of cost)")
+        plot_lines(ax, cum, styles, "Cumulative excess (net of cost)", shade=shade)
         ax.set_title("Excess", loc="left")
         return fig
 
@@ -275,7 +292,7 @@ def fig_summary_table(summary: pd.DataFrame):
         return fig
 
 
-def fig_performance_page(summary, cum, alpha, annual, styles, title="Performance summary"):
+def fig_performance_page(summary, cum, alpha, annual, styles, title="Performance summary", shade=()):
     """スライド 1 枚相当（表 + 4 つの図）。"""
     with style():
         fig = plt.figure(figsize=(16, 11 + max(0, len(summary) - 8) * 0.3))
@@ -292,7 +309,7 @@ def fig_performance_page(summary, cum, alpha, annual, styles, title="Performance
         )
         fig.suptitle(title, x=0.05, ha="left", fontsize=15, fontweight="bold", color=INK)
         _draw_table(fig.add_subplot(gs[0, :]), summary)
-        fig_cumulative_excess(cum, styles, ax=fig.add_subplot(gs[1, 0]))
+        fig_cumulative_excess(cum, styles, ax=fig.add_subplot(gs[1, 0]), shade=shade)
         fig_alpha(alpha, styles, ax=fig.add_subplot(gs[1, 1]))
         sub = gs[2, 0].subgridspec(2, 1, height_ratios=[3, 2], hspace=0.08)
         a1 = fig.add_subplot(sub[0])
@@ -328,10 +345,10 @@ def fig_barra_classes(annualized: pd.DataFrame):
         return fig
 
 
-def fig_cumulative_class(cum: pd.DataFrame, styles: dict[str, RunStyle], cls: str):
+def fig_cumulative_class(cum: pd.DataFrame, styles: dict[str, RunStyle], cls: str, shade=()):
     with style():
         fig, ax = plt.subplots(figsize=(10, 5))
-        plot_lines(ax, cum, styles, "Cumulative sum of contribution", decimals=1)
+        plot_lines(ax, cum, styles, "Cumulative sum of contribution", decimals=1, shade=shade)
         ax.set_title(f"Cumulative {cls} contribution", loc="left")
         fig.tight_layout()
         return fig

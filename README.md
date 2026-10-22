@@ -25,6 +25,7 @@ title = "EMAI_Transformer"
 output_dir = "../reports/raw"
 start = 201702        # 省略可（YYYYMM）。省略時は全期間
 end = 202603          # 省略可
+exclude = [202204, "202001-202003"]  # 省略可。集計から除く月（YYYYMM か "YYYYMM-YYYYMM"）
 
 [factor_returns]      # 省略可。Barra 系の図に必要（後述）
 path = "../data/fctrtn_monthly.csv"
@@ -49,6 +50,7 @@ uv run bax-performance report \
   -o reports/quick --start 201702 --end 202603
 ```
 
+除外月は `--exclude 202204 --exclude 202001-202003` のようにも指定できる（設定ファイルの `exclude` を置き換える）。
 `--run` はラベル省略可（ディレクトリ名がラベルになる）。設定ファイルと併用すると CLI の値が優先。
 
 ### Python から
@@ -89,6 +91,14 @@ reports/<name>/
 ## 指標の定義
 
 月次・小数ベース。リターンが NA の月（初回の組成月）は除外。
+
+### 除外月（`exclude`）
+
+- 指定した月は、サマリー指標・累積超過・暦年別超過・ブリンソン分解・Barra 分解のすべてから除く。回転率とコストも除く
+- 系列から月を抜くだけで、前後の月はそのままつなぐ。年率化は残った月数で行う
+- 時系列の図では除外月を網掛けし、各図の右上に `Excluded months: ...` と注記する。実際に除いた月は `tables/excluded_months.csv` に出る
+- 期待アルファの推移は最適化時点の値なので、除外の対象外
+- 集計期間やデータに無い月を指定した場合は、警告を出して無視する
 
 | 指標 | 定義 |
 | --- | --- |
